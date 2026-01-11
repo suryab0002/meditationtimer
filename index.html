@@ -92,6 +92,11 @@
         #counter { font-size: clamp(4rem, 15vw, 5.5rem); font-weight: 200; z-index: 10; }
         
         #startBtn { margin-top: 20px; padding: 18px 60px; font-size: 1.1rem; background: white; color: black; border: none; border-radius: 50px; cursor: pointer; font-weight: bold; width: 100%; max-width: 300px; }
+        
+        /* New Reset Button Style */
+        #resetBtn { margin-top: 30px; padding: 12px 40px; font-size: 0.9rem; background: transparent; color: #94a3b8; border: 1px solid #334155; border-radius: 50px; cursor: pointer; transition: 0.2s; }
+        #resetBtn:hover { border-color: var(--error); color: var(--error); }
+
         .back-btn { margin-top: 20px; color: #475569; cursor: pointer; font-size: 0.9rem; text-decoration: underline; }
         
         footer { padding: 20px 0; text-align: center; font-size: 0.8rem; color: #475569; width: 100%; }
@@ -131,6 +136,8 @@
         <div id="phase-label" style="font-size:1.8rem; letter-spacing:2px; margin-top:10px">Preparing...</div>
         <div id="warmup-tip" style="min-height: 50px; margin-top: 10px; color: #94a3b8; font-style: italic; line-height: 1.4;"></div>
         <div id="cycle-info" style="margin-top:10px; color:#94a3b8"></div>
+        
+        <button id="resetBtn" onclick="location.reload()">RESET SESSION</button>
     </div>
 
     <footer>© 2026 suryab0002. All rights reserved.</footer>
@@ -145,18 +152,6 @@
         };
 
         let activeKey = '', selectedWarmup = 0, userCycles = 4, userBoxSize = 4, userBPM = 6, audioCtx;
-        let maleVoice = null;
-
-        // FIXED: Robust male voice selection for all devices
-        function setVoice() {
-            const voices = window.speechSynthesis.getVoices();
-            // Try to find a specific soothing male voice
-            maleVoice = voices.find(v => (v.name.includes('Male') || v.name.includes('David') || v.name.includes('Daniel') || v.name.includes('Google UK Male')) && v.lang.includes('en')) || 
-                        voices.find(v => v.name.includes('Male')) || 
-                        voices[0];
-        }
-
-        window.speechSynthesis.onvoiceschanged = setVoice;
 
         function init() {
             const container = document.getElementById('menu-container');
@@ -168,7 +163,6 @@
                 card.innerHTML = `<h3>${tech.title}</h3><p>${tech.desc}</p>`;
                 container.appendChild(card);
             });
-            setVoice();
         }
 
         function setWarmup(val, btn) {
@@ -242,15 +236,10 @@
             });
         }
 
-        // FIXED: Standardized soothing male voice and volume
         function speak(text) {
             window.speechSynthesis.cancel();
             const u = new SpeechSynthesisUtterance(text);
-            if (maleVoice) u.voice = maleVoice;
-            u.volume = 0.4; // 40% Volume (Lowered)
-            u.pitch = 0.85; // Slightly deeper for soothing effect
-            u.rate = 0.9;   // Slightly slower for calming effect
-            window.speechSynthesis.speak(u);
+            u.volume = 0.4; u.rate = 1.0; window.speechSynthesis.speak(u);
         }
 
         const waitOneSec = () => new Promise(r => {
@@ -260,14 +249,6 @@
         });
 
         async function initiateSession() {
-            // FIXED: iPhone unlock - Resume AudioContext and play silent speech
-            if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
-            if (audioCtx.state === 'suspended') audioCtx.resume();
-            
-            // This "unlocks" speech on iOS Safari
-            const wakeup = new SpeechSynthesisUtterance("");
-            window.speechSynthesis.speak(wakeup);
-
             const tech = TECHNIQUES[activeKey];
             let steps, totalTimeReq = 0;
 
