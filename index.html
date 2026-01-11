@@ -93,7 +93,6 @@
         
         #startBtn { margin-top: 20px; padding: 18px 60px; font-size: 1.1rem; background: white; color: black; border: none; border-radius: 50px; cursor: pointer; font-weight: bold; width: 100%; max-width: 300px; }
         
-        /* New Reset Button Style */
         #resetBtn { margin-top: 30px; padding: 12px 40px; font-size: 0.9rem; background: transparent; color: #94a3b8; border: 1px solid #334155; border-radius: 50px; cursor: pointer; transition: 0.2s; }
         #resetBtn:hover { border-color: var(--error); color: var(--error); }
 
@@ -196,15 +195,31 @@
             }
 
             if (tech.mode !== 'cycles') {
-                html += `<span class="setting-label">Total Duration</span><div style="display:flex; gap:10px; align-items:center; justify-content:center"><input type="number" id="minIn" value="2" min="0"> min <input type="number" id="secIn" value="00" min="0" max="59"> sec</div>`;
+                html += `<span class="setting-label">Total Duration</span><div style="display:flex; gap:10px; align-items:center; justify-content:center"><input type="number" id="minIn" value="2" min="0" max="60" oninput="validNum(this)"> min <input type="number" id="secIn" value="00" min="0" max="60" oninput="validNum(this)"> sec</div>`;
             }
             dynamicArea.innerHTML = html;
         }
 
+        function validNum(input) {
+            let val = parseInt(input.value);
+            if (val < 0) input.value = 0;
+            if (val > 60) input.value = 60;
+        }
+
         function highlight(btn) { btn.parentElement.querySelectorAll('button').forEach(b => b.classList.remove('active')); btn.classList.add('active'); }
 
-        function playRisingSweep(dur) {
+        function unlockAudio() {
             if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+            if (audioCtx.state === 'suspended') audioCtx.resume();
+            const source = audioCtx.createBufferSource();
+            source.buffer = audioCtx.createBuffer(1, 1, 22050);
+            source.connect(audioCtx.destination);
+            source.start(0);
+            window.speechSynthesis.speak(new SpeechSynthesisUtterance(''));
+        }
+
+        function playRisingSweep(dur) {
+            if (!audioCtx) unlockAudio();
             const o = audioCtx.createOscillator(), g = audioCtx.createGain();
             o.frequency.setValueAtTime(180, audioCtx.currentTime);
             o.frequency.linearRampToValueAtTime(400, audioCtx.currentTime + dur);
@@ -216,7 +231,7 @@
         }
 
         function playFallingChime(dur) {
-            if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+            if (!audioCtx) unlockAudio();
             const o = audioCtx.createOscillator(), g = audioCtx.createGain();
             o.frequency.setValueAtTime(400, audioCtx.currentTime);
             o.frequency.exponentialRampToValueAtTime(180, audioCtx.currentTime + dur);
@@ -226,7 +241,7 @@
         }
 
         function playBell() {
-            if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+            if (!audioCtx) unlockAudio();
             [240, 480, 720].forEach((f, i) => {
                 const o = audioCtx.createOscillator(), g = audioCtx.createGain();
                 o.frequency.setValueAtTime(f, audioCtx.currentTime);
@@ -239,6 +254,7 @@
         function speak(text) {
             window.speechSynthesis.cancel();
             const u = new SpeechSynthesisUtterance(text);
+            u.lang = 'en-US';
             u.volume = 0.4; u.rate = 1.0; window.speechSynthesis.speak(u);
         }
 
@@ -249,8 +265,9 @@
         });
 
         async function initiateSession() {
+            unlockAudio();
             const tech = TECHNIQUES[activeKey];
-            let steps, totalTimeReq = 0;
+            let steps;
 
             if (activeKey === 'custom') {
                 const i = parseInt(document.getElementById('cIn').value), h = parseInt(document.getElementById('cHold').value), o = parseInt(document.getElementById('cOut').value);
@@ -266,8 +283,11 @@
 
             if (tech.mode !== 'cycles') {
                 const m = parseInt(document.getElementById('minIn').value) || 0, s = parseInt(document.getElementById('secIn').value) || 0;
-                totalTimeReq = (m * 60) + s;
-                if (totalTimeReq <= 0) return;
+                const totalTimeReq = (m * 60) + s;
+                if (totalTimeReq <= 0) {
+                    alert("Please enter a valid duration.");
+                    return;
+                }
                 loops = Math.ceil(totalTimeReq / cycleDur);
             }
 
@@ -291,7 +311,7 @@
                 for(let step of steps) {
                     document.getElementById('phase-label').innerText = step.label;
                     document.getElementById('circle').style.backgroundColor = step.color;
-                    if(tech.audioStyle === 'sweeps') { (step.label === 'In') ? playRisingSweep(step.duration) : playFallingChime(step.duration); }
+                    if(tech.audioStyle === 'sweeps') { (step.label === 'In' || step.label === 'Inhale') ? playRisingSweep(step.duration) : playFallingChime(step.duration); }
                     
                     for(let i = 1; i <= step.duration; i++) {
                         document.getElementById('counter').innerText = i;
