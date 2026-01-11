@@ -1,1 +1,308 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Breathing Timer Hub</title>
+    <style>
+        :root {
+            --bg: #0f172a;
+            --accent: #38bdf8;
+            --text: #f8fafc;
+            --panel: #1e293b;
+            --inhale: #38bdf8;
+            --hold: #fbbf24;
+            --exhale: #2dd4bf;
+            --hold-empty: #818cf8;
+            --error: #ef4444;
+        }
 
+        body {
+            margin: 0;
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            background-color: var(--bg);
+            color: var(--text);
+            font-family: 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+            overflow-x: hidden;
+        }
+
+        .view { 
+            display: none; 
+            text-align: center; 
+            width: 90%; 
+            max-width: 550px; 
+            padding: 20px; 
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+        }
+        .view.active { display: flex; }
+
+        h1 { font-size: clamp(2rem, 8vw, 3rem); font-weight: 300; margin-bottom: 30px; }
+        
+        .menu-grid { 
+            display: flex;
+            flex-direction: column;
+            gap: 15px; 
+            width: 100%; 
+        }
+        
+        .main-card {
+            background: var(--panel);
+            border: 1px solid #334155;
+            padding: 25px;
+            border-radius: 15px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            text-align: center; 
+            width: 100%;
+            box-sizing: border-box;
+        }
+        .main-card:hover { border-color: var(--accent); transform: translateY(-3px); }
+        .main-card h3 { margin: 0 0 8px 0; color: var(--accent); font-weight: 400; font-size: 1.25rem; }
+        .main-card p { margin: 0; color: #94a3b8; font-size: 0.9rem; line-height: 1.4; }
+
+        .setting-group { margin-bottom: 25px; width: 100%; text-align: center; }
+        .setting-label { display: block; margin-bottom: 12px; color: #94a3b8; text-transform: uppercase; font-size: 0.75rem; letter-spacing: 1px; }
+        
+        .btn-group { display: flex; gap: 10px; justify-content: center; flex-wrap: wrap; }
+        
+        .bpm-btn, .opt-btn {
+            background: var(--panel); border: 1px solid #334155; color: white;
+            padding: 12px 20px; border-radius: 8px; cursor: pointer; transition: 0.2s;
+            font-size: 0.9rem;
+        }
+        .opt-btn.active, .bpm-btn.active { background: var(--accent); border-color: var(--accent); color: var(--bg); font-weight: bold; }
+
+        .custom-inputs { display: flex; gap: 10px; justify-content: center; align-items: center; margin-bottom: 20px; }
+        .custom-box { display: flex; flex-direction: column; align-items: center; gap: 5px; }
+        .custom-box span { font-size: 0.7rem; color: #94a3b8; }
+
+        input[type="number"] {
+            background: var(--panel); border: 1px solid #334155; color: white;
+            padding: 12px; width: 70px; border-radius: 8px; text-align: center; font-size: 1.1rem;
+        }
+
+        #visual-hub { position: relative; width: clamp(240px, 60vw, 300px); height: clamp(240px, 60vw, 300px); display: flex; justify-content: center; align-items: center; margin: 20px 0; }
+        #circle { position: absolute; width: 100%; height: 100%; border-radius: 50%; background: var(--accent); opacity: 0.2; transform: scale(0.5); transition: transform 1s linear, background-color 0.8s ease; }
+        #counter { font-size: clamp(4rem, 15vw, 5.5rem); font-weight: 200; z-index: 10; }
+        
+        #startBtn { margin-top: 20px; padding: 18px 60px; font-size: 1.1rem; background: white; color: black; border: none; border-radius: 50px; cursor: pointer; font-weight: bold; width: 100%; max-width: 300px; }
+        .back-btn { margin-top: 20px; color: #475569; cursor: pointer; font-size: 0.9rem; text-decoration: underline; }
+        
+        footer { padding: 20px 0; text-align: center; font-size: 0.8rem; color: #475569; width: 100%; }
+    </style>
+</head>
+<body>
+
+    <div id="home-view" class="view active">
+        <h1>Breathing Timer</h1>
+        <div id="menu-container" class="menu-grid"></div>
+    </div>
+
+    <div id="setup-view" class="view">
+        <h2 id="setup-title" style="font-weight:300;">Setup</h2>
+        
+        <div class="setting-group">
+            <span class="setting-label">Warmup</span>
+            <div class="btn-group" id="warmup-opts">
+                <button class="opt-btn active" onclick="setWarmup(0, this)">None</button>
+                <button class="opt-btn" onclick="setWarmup(30, this)">30s</button>
+                <button class="opt-btn" onclick="setWarmup(60, this)">60s</button>
+                <button class="opt-btn" onclick="setWarmup(90, this)">90s</button>
+            </div>
+        </div>
+
+        <div id="dynamic-setup" class="setting-group"></div>
+        
+        <button id="startBtn" onclick="initiateSession()">BEGIN SESSION</button>
+        <div class="back-btn" onclick="location.reload()">Cancel</div>
+    </div>
+
+    <div id="active-view" class="view">
+        <div id="visual-hub">
+            <div id="circle"></div>
+            <div id="counter">--</div>
+        </div>
+        <div id="phase-label" style="font-size:1.8rem; letter-spacing:2px; margin-top:10px">Preparing...</div>
+        <div id="warmup-tip" style="min-height: 50px; margin-top: 10px; color: #94a3b8; font-style: italic; line-height: 1.4;"></div>
+        <div id="cycle-info" style="margin-top:10px; color:#94a3b8"></div>
+    </div>
+
+    <footer>© 2026 suryab0002. All rights reserved.</footer>
+
+    <script>
+        const TECHNIQUES = {
+            '478': { title: '4-7-8 Technique', desc: 'The "Natural Tranquilizer" for the nervous system.', warmupMsg: "Sit or lie down comfortably, take few deep breaths before emptying your lungs", shape: '50%', mode: 'cycles', speakNumbers: true, audioStyle: 'default', steps: [{ label: 'Inhale', duration: 4, color: 'var(--inhale)', grow: true }, { label: 'Hold', duration: 7, color: 'var(--hold)', grow: true }, { label: 'Exhale', duration: 8, color: 'var(--exhale)', grow: false }] },
+            'box': { title: 'Box Breathing', desc: 'Used by Navy SEALs for focus and mental clarity.', warmupMsg: "Sit or lie down comfortably, take few deep breaths", shape: '20%', mode: 'timer', speakNumbers: true, audioStyle: 'default', getSteps: (size) => [{ label: 'Inhale', duration: size, color: 'var(--inhale)', grow: true }, { label: 'Hold', duration: size, color: 'var(--hold)', grow: true }, { label: 'Exhale', duration: size, color: 'var(--exhale)', grow: false }, { label: 'Hold', duration: size, color: 'var(--hold-empty)', grow: false }] },
+            'breathcount': { title: 'Breath Count', desc: 'Mindful breathing to improve focus.', warmupMsg: "Sit or lie down comfortably, start to focus on your breath", shape: '50%', mode: 'timer', speakNumbers: false, audioStyle: 'default', getSteps: () => [{ label: 'In', duration: 2, color: 'var(--inhale)', grow: true }, { label: 'Out', duration: 2, color: 'var(--exhale)', grow: false }] },
+            'paced': { title: 'Paced Breathing', desc: 'Trigger the "rest and digest" system by slowing your breath.', warmupMsg: "Sit or lie down comfortably, start to focus on your breath", shape: '50%', mode: 'timer', speakNumbers: false, audioStyle: 'sweeps', getSteps: (bpm) => { const tc = 60/bpm; return [{ label: 'In', duration: Math.floor(tc/2), color: 'var(--inhale)', grow: true }, { label: 'Out', duration: Math.ceil(tc/2), color: 'var(--exhale)', grow: false }]; } },
+            'custom': { title: 'Custom In Out Breathe', desc: 'Tip: Exhale longer to have calm relaxing effect.', warmupMsg: "Sit or lie down comfortably, anchor to your breath", shape: '50%', mode: 'custom', speakNumbers: true, audioStyle: 'default', getSteps: (i, h, o) => { let s = [{ label: 'In', duration: i, color: 'var(--inhale)', grow: true }]; if(h > 0) s.push({ label: 'Hold', duration: h, color: 'var(--hold)', grow: true }); s.push({ label: 'Out', duration: o, color: 'var(--exhale)', grow: false }); return s; } }
+        };
+
+        let activeKey = '', selectedWarmup = 0, userCycles = 4, userBoxSize = 4, userBPM = 6, audioCtx;
+
+        function init() {
+            const container = document.getElementById('menu-container');
+            // Reordered loop logic ensures 'custom' appears last if object is sorted by definition
+            Object.keys(TECHNIQUES).forEach(key => {
+                const tech = TECHNIQUES[key];
+                const card = document.createElement('div');
+                card.className = 'main-card';
+                card.onclick = () => openSetup(key);
+                card.innerHTML = `<h3>${tech.title}</h3><p>${tech.desc}</p>`;
+                container.appendChild(card);
+            });
+        }
+
+        function setWarmup(val, btn) {
+            btn.parentElement.querySelectorAll('button').forEach(b => b.classList.remove('active'));
+            btn.classList.add('active');
+            selectedWarmup = val;
+        }
+
+        function openSetup(key) {
+            activeKey = key;
+            const tech = TECHNIQUES[key];
+            document.getElementById('home-view').classList.remove('active');
+            document.getElementById('setup-view').classList.add('active');
+            document.getElementById('setup-title').innerText = tech.title;
+            const dynamicArea = document.getElementById('dynamic-setup');
+            
+            let html = "";
+            if (key === 'custom') {
+                html = `<span class="setting-label">Step Durations (Seconds)</span>
+                    <div class="custom-inputs">
+                        <div class="custom-box"><span>In</span><input type="number" id="cIn" value="4" min="1" max="60"></div>
+                        <div class="custom-box"><span>Hold</span><input type="number" id="cHold" value="0" min="0" max="60"></div>
+                        <div class="custom-box"><span>Out</span><input type="number" id="cOut" value="5" min="1" max="60"></div>
+                    </div>`;
+            } else if (key === 'box') {
+                html = `<span class="setting-label">Box Size</span><div class="btn-group" style="margin-bottom:20px">${[4,5,6].map(n => `<button class="opt-btn ${n==4?'active':''}" onclick="userBoxSize=${n}; highlight(this)">${n}s</button>`).join('')}</div>`;
+            } else if (key === 'paced') {
+                html = `<span class="setting-label">BPM</span><div class="btn-group" style="margin-bottom:20px">${[10,6,5,3,2].map(n => `<button class="bpm-btn ${n==6?'active':''}" onclick="userBPM=${n}; highlight(this)">${n}</button>`).join('')}</div>`;
+            } else if (tech.mode === 'cycles') {
+                html = `<span class="setting-label">Cycles</span><div class="btn-group">${[2,4,6,8].map(n => `<button class="opt-btn ${n==4?'active':''}" onclick="userCycles=${n}; highlight(this)">${n}</button>`).join('')}</div>`;
+            }
+
+            if (tech.mode !== 'cycles') {
+                html += `<span class="setting-label">Total Duration</span><div style="display:flex; gap:10px; align-items:center; justify-content:center"><input type="number" id="minIn" value="2" min="0"> min <input type="number" id="secIn" value="00" min="0" max="59"> sec</div>`;
+            }
+            dynamicArea.innerHTML = html;
+        }
+
+        function highlight(btn) { btn.parentElement.querySelectorAll('button').forEach(b => b.classList.remove('active')); btn.classList.add('active'); }
+
+        function playRisingSweep(dur) {
+            if (!audioCtx) audioCtx = new AudioContext();
+            const o = audioCtx.createOscillator(), g = audioCtx.createGain();
+            o.frequency.setValueAtTime(180, audioCtx.currentTime);
+            o.frequency.linearRampToValueAtTime(400, audioCtx.currentTime + dur);
+            g.gain.setValueAtTime(0, audioCtx.currentTime);
+            g.gain.linearRampToValueAtTime(0.08, audioCtx.currentTime + 0.3);
+            g.gain.setValueAtTime(0.08, audioCtx.currentTime + dur - 0.2);
+            g.gain.linearRampToValueAtTime(0, audioCtx.currentTime + dur);
+            o.connect(g); g.connect(audioCtx.destination); o.start(); o.stop(audioCtx.currentTime + dur);
+        }
+
+        function playFallingChime(dur) {
+            if (!audioCtx) audioCtx = new AudioContext();
+            const o = audioCtx.createOscillator(), g = audioCtx.createGain();
+            o.frequency.setValueAtTime(400, audioCtx.currentTime);
+            o.frequency.exponentialRampToValueAtTime(180, audioCtx.currentTime + dur);
+            g.gain.setValueAtTime(0.08, audioCtx.currentTime);
+            g.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + dur);
+            o.connect(g); g.connect(audioCtx.destination); o.start(); o.stop(audioCtx.currentTime + dur);
+        }
+
+        function playBell() {
+            if (!audioCtx) audioCtx = new AudioContext();
+            [240, 480, 720].forEach((f, i) => {
+                const o = audioCtx.createOscillator(), g = audioCtx.createGain();
+                o.frequency.setValueAtTime(f, audioCtx.currentTime);
+                g.gain.setValueAtTime(0.1/(i+1), audioCtx.currentTime);
+                g.gain.exponentialRampToValueAtTime(0.0001, audioCtx.currentTime + 3);
+                o.connect(g); g.connect(audioCtx.destination); o.start(); o.stop(audioCtx.currentTime+3);
+            });
+        }
+
+        function speak(text) {
+            window.speechSynthesis.cancel();
+            const u = new SpeechSynthesisUtterance(text);
+            u.volume = 0.4; u.rate = 1.0; window.speechSynthesis.speak(u);
+        }
+
+        const waitOneSec = () => new Promise(r => {
+            const start = performance.now();
+            const f = () => (performance.now()-start >= 1000) ? r() : requestAnimationFrame(f);
+            requestAnimationFrame(f);
+        });
+
+        async function initiateSession() {
+            const tech = TECHNIQUES[activeKey];
+            let steps, totalTimeReq = 0;
+
+            if (activeKey === 'custom') {
+                const i = parseInt(document.getElementById('cIn').value), h = parseInt(document.getElementById('cHold').value), o = parseInt(document.getElementById('cOut').value);
+                if(i < 1 || o < 1) return;
+                steps = tech.getSteps(i, h, o);
+            } else if (activeKey === 'box') { steps = tech.getSteps(userBoxSize); }
+            else if (activeKey === 'paced') { steps = tech.getSteps(userBPM); }
+            else if (activeKey === 'breathcount') { steps = tech.getSteps(); }
+            else { steps = tech.steps; }
+
+            const cycleDur = steps.reduce((a, b) => a + b.duration, 0);
+            let loops = userCycles;
+
+            if (tech.mode !== 'cycles') {
+                const m = parseInt(document.getElementById('minIn').value) || 0, s = parseInt(document.getElementById('secIn').value) || 0;
+                totalTimeReq = (m * 60) + s;
+                if (totalTimeReq <= 0) return;
+                loops = Math.ceil(totalTimeReq / cycleDur);
+            }
+
+            document.getElementById('setup-view').classList.remove('active');
+            document.getElementById('active-view').classList.add('active');
+            document.getElementById('circle').style.borderRadius = tech.shape;
+
+            if(selectedWarmup > 0) {
+                document.getElementById('circle').style.display = 'none';
+                document.getElementById('phase-label').innerText = "Warmup";
+                document.getElementById('warmup-tip').innerText = tech.warmupMsg;
+                for(let i = selectedWarmup; i > 0; i--) { document.getElementById('counter').innerText = i; await waitOneSec(); }
+            }
+
+            document.getElementById('warmup-tip').innerText = "";
+            document.getElementById('circle').style.display = 'block';
+            playBell(); await new Promise(r => setTimeout(r, 1500));
+
+            for(let c = 1; c <= loops; c++) {
+                document.getElementById('cycle-info').innerText = `Cycle ${c} of ${loops}`;
+                for(let step of steps) {
+                    document.getElementById('phase-label').innerText = step.label;
+                    document.getElementById('circle').style.backgroundColor = step.color;
+                    if(tech.audioStyle === 'sweeps') { (step.label === 'In') ? playRisingSweep(step.duration) : playFallingChime(step.duration); }
+                    
+                    for(let i = 1; i <= step.duration; i++) {
+                        document.getElementById('counter').innerText = i;
+                        const s = step.grow ? 0.5 + (i/step.duration) : 1.5 - (i/step.duration);
+                        document.getElementById('circle').style.transform = `scale(${s})`;
+                        if(i === 1) speak(step.label);
+                        else if(tech.speakNumbers) speak(i.toString());
+                        await waitOneSec();
+                    }
+                }
+            }
+            document.getElementById('phase-label').innerText = "Complete";
+            document.getElementById('counter').innerText = "Done";
+            await new Promise(r => setTimeout(r, 5000));
+            location.reload();
+        }
+        init();
+    </script>
+</body>
+</html>
