@@ -30,78 +30,254 @@
             overflow-x: hidden;
         }
 
-        .view { 
-            display: none; 
-            text-align: center; 
-            width: 90%; 
-            max-width: 550px; 
-            padding: 20px; 
-            flex-direction: column;
-            align-items: center;
-            justify-content: center;
+        /* Burger Menu & Blog Overlay Styles */
+        #burger-icon {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            z-index: 1000;
+            cursor: pointer;
+            padding: 10px;
+            background: var(--panel);
+            border-radius: 8px;
+            border: 1px solid #334155;
         }
-        .view.active { display: flex; }
 
-        h1 { font-size: clamp(2rem, 8vw, 3rem); font-weight: 300; margin-bottom: 30px; }
-        
-        .menu-grid { 
+        #side-menu {
+            position: fixed;
+            top: 0;
+            right: -300px;
+            width: 260px;
+            height: 100%;
+            background: var(--panel);
+            z-index: 1001;
+            transition: 0.3s ease;
+            box-shadow: -5px 0 15px rgba(0,0,0,0.5);
+            padding: 30px 20px;
             display: flex;
             flex-direction: column;
-            gap: 15px; 
-            width: 100%; 
+            gap: 20px;
         }
-        
-        .main-card {
-            background: var(--panel);
-            border: 1px solid #334155;
-            padding: 25px;
-            border-radius: 15px;
+
+        #side-menu.open { right: 0; }
+
+        .menu-close-btn {
+            align-self: flex-start;
+            background: transparent;
+            color: var(--accent);
+            border: 1px solid var(--accent);
+            padding: 5px 15px;
+            border-radius: 5px;
             cursor: pointer;
-            transition: all 0.3s ease;
-            text-align: center; 
+            margin-bottom: 20px;
+        }
+
+        .menu-link {
+            color: var(--text);
+            text-decoration: none;
+            padding: 12px;
+            border-radius: 8px;
+            background: rgba(255,255,255,0.05);
+            transition: 0.2s;
+            font-size: 0.95rem;
+            cursor: pointer;
+            border: none;
+            text-align: left;
+        }
+
+        .menu-link:hover { background: var(--accent); color: var(--bg); }
+        .menu-section-title { font-size: 0.75rem; text-transform: uppercase; color: #94a3b8; letter-spacing: 1px; margin-top: 10px; }
+
+        /* Blog Overlay Grid */
+        #blog-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
             width: 100%;
+            height: 100%;
+            background: var(--bg);
+            z-index: 2000;
+            display: none;
+            overflow-y: auto;
+            padding: 40px 20px;
             box-sizing: border-box;
         }
+
+        #blog-overlay.active { display: block; }
+
+        .overlay-header {
+            max-width: 1200px;
+            margin: 0 auto 40px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .blog-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+            gap: 20px;
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+
+        @media (min-width: 1100px) {
+            .blog-grid { grid-template-columns: repeat(4, 1fr); }
+        }
+
+        .blog-tile {
+            background: var(--panel);
+            border-radius: 12px;
+            overflow: hidden;
+            border: 1px solid #334155;
+            transition: 0.3s;
+            display: flex;
+            flex-direction: column;
+            height: 100%;
+            min-height: 380px;
+        }
+
+        .blog-tile:hover { transform: translateY(-5px); border-color: var(--accent); }
+
+        .blog-img {
+            width: 100%;
+            height: 180px;
+            background: #1e293b;
+            object-fit: cover;
+            display: block;
+        }
+
+        .blog-content { padding: 18px; flex-grow: 1; display: flex; flex-direction: column; }
+        .blog-title { font-size: 1rem; margin-bottom: 15px; line-height: 1.4; color: var(--text); font-weight: 500; }
+        
+        .read-btn {
+            margin-top: auto;
+            background: var(--accent);
+            color: var(--bg);
+            text-decoration: none;
+            text-align: center;
+            padding: 10px;
+            border-radius: 6px;
+            font-weight: bold;
+            font-size: 0.85rem;
+        }
+
+        /* Overlay Footer Style */
+        .overlay-footer {
+            max-width: 1200px;
+            margin: 60px auto 20px;
+            text-align: center;
+            padding-top: 20px;
+            border-top: 1px solid #334155;
+            color: #94a3b8;
+            font-size: 0.85rem;
+        }
+
+        .overlay-footer a {
+            color: var(--accent);
+            text-decoration: none;
+        }
+
+        .overlay-footer a:hover {
+            text-decoration: underline;
+        }
+
+        /* --- Meditation App Styles --- */
+        .view { display: none; text-align: center; width: 90%; max-width: 550px; padding: 20px; flex-direction: column; align-items: center; justify-content: center; }
+        .view.active { display: flex; }
+        h1 { font-size: clamp(2rem, 8vw, 3rem); font-weight: 300; margin-bottom: 30px; }
+        .menu-grid { display: flex; flex-direction: column; gap: 15px; width: 100%; }
+        .main-card { background: var(--panel); border: 1px solid #334155; padding: 25px; border-radius: 15px; cursor: pointer; transition: all 0.3s ease; text-align: center; width: 100%; box-sizing: border-box; }
         .main-card:hover { border-color: var(--accent); transform: translateY(-3px); }
         .main-card h3 { margin: 0 0 8px 0; color: var(--accent); font-weight: 400; font-size: 1.25rem; }
         .main-card p { margin: 0; color: #94a3b8; font-size: 0.9rem; line-height: 1.4; }
-
         .setting-group { margin-bottom: 25px; width: 100%; text-align: center; }
         .setting-label { display: block; margin-bottom: 12px; color: #94a3b8; text-transform: uppercase; font-size: 0.75rem; letter-spacing: 1px; }
-        
         .btn-group { display: flex; gap: 10px; justify-content: center; flex-wrap: wrap; }
-        
-        .bpm-btn, .opt-btn {
-            background: var(--panel); border: 1px solid #334155; color: white;
-            padding: 12px 20px; border-radius: 8px; cursor: pointer; transition: 0.2s;
-            font-size: 0.9rem;
-        }
+        .bpm-btn, .opt-btn { background: var(--panel); border: 1px solid #334155; color: white; padding: 12px 20px; border-radius: 8px; cursor: pointer; transition: 0.2s; font-size: 0.9rem; }
         .opt-btn.active, .bpm-btn.active { background: var(--accent); border-color: var(--accent); color: var(--bg); font-weight: bold; }
-
         .custom-inputs { display: flex; gap: 10px; justify-content: center; align-items: center; margin-bottom: 20px; }
         .custom-box { display: flex; flex-direction: column; align-items: center; gap: 5px; }
         .custom-box span { font-size: 0.7rem; color: #94a3b8; }
-
-        input[type="number"] {
-            background: var(--panel); border: 1px solid #334155; color: white;
-            padding: 12px; width: 70px; border-radius: 8px; text-align: center; font-size: 1.1rem;
-        }
-
+        input[type="number"] { background: var(--panel); border: 1px solid #334155; color: white; padding: 12px; width: 70px; border-radius: 8px; text-align: center; font-size: 1.1rem; }
         #visual-hub { position: relative; width: clamp(240px, 60vw, 300px); height: clamp(240px, 60vw, 300px); display: flex; justify-content: center; align-items: center; margin: 20px 0; }
         #circle { position: absolute; width: 100%; height: 100%; border-radius: 50%; background: var(--accent); opacity: 0.2; transform: scale(0.5); transition: transform 1s linear, background-color 0.8s ease; }
         #counter { font-size: clamp(4rem, 15vw, 5.5rem); font-weight: 200; z-index: 10; }
-        
         #startBtn { margin-top: 20px; padding: 18px 60px; font-size: 1.1rem; background: white; color: black; border: none; border-radius: 50px; cursor: pointer; font-weight: bold; width: 100%; max-width: 300px; }
-        
         #resetBtn { margin-top: 30px; padding: 12px 40px; font-size: 0.9rem; background: transparent; color: #94a3b8; border: 1px solid #334155; border-radius: 50px; cursor: pointer; transition: 0.2s; }
         #resetBtn:hover { border-color: var(--error); color: var(--error); }
-
         .back-btn { margin-top: 20px; color: #475569; cursor: pointer; font-size: 0.9rem; text-decoration: underline; }
-        
         footer { padding: 20px 0; text-align: center; font-size: 0.8rem; color: #475569; width: 100%; }
     </style>
 </head>
 <body>
+
+    <div id="burger-icon" onclick="toggleMenu()">
+        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="3" y1="12" x2="21" y2="12"></line><line x1="3" y1="6" x2="21" y2="6"></line><line x1="3" y1="18" x2="21" y2="18"></line></svg>
+    </div>
+
+    <div id="side-menu">
+        <button class="menu-close-btn" onclick="toggleMenu()">← Back</button>
+        <div class="menu-section-title">Author</div>
+        <a href="https://medium.com/@suryab0002" target="_blank" class="menu-link">My Blogsite</a>
+        
+        <div class="menu-section-title">Content</div>
+        <button class="menu-link" onclick="toggleBlogs()">Top Blogs</button>
+    </div>
+
+    <div id="blog-overlay">
+        <div class="overlay-header">
+            <h2 style="font-weight: 300; color: var(--accent);">Top Blogs</h2>
+            <button class="menu-close-btn" onclick="toggleBlogs()">Close ✕</button>
+        </div>
+        <div class="blog-grid">
+            <div class="blog-tile">
+                <img src="https://images.unsplash.com/photo-1506126613408-eca07ce68773?auto=format&fit=crop&w=600" class="blog-img">
+                <div class="blog-content">
+                    <div class="blog-title">Powerful Anchors to Deepen Your Meditation Practice</div>
+                    <a href="https://medium.com/readers-club/powerful-anchors-to-deepen-your-meditation-practice-fbab9bccf456" target="_blank" class="read-btn">Read Article</a>
+                </div>
+            </div>
+            <div class="blog-tile">
+                <img src="https://images.unsplash.com/photo-1528715471579-d1bcf0ba5e83?auto=format&fit=crop&w=600" class="blog-img">
+                <div class="blog-content">
+                    <div class="blog-title">The One Practice That Reduces Stress, Boosts Focus, and Improves Your Health</div>
+                    <a href="https://medium.com/illumination/the-one-practice-that-reduces-stress-boosts-focus-and-improves-your-health-e17f2c483f87" target="_blank" class="read-btn">Read Article</a>
+                </div>
+            </div>
+            <div class="blog-tile">
+                <img src="https://images.unsplash.com/photo-1484480974693-6ca0a78fb36b?auto=format&fit=crop&w=600" class="blog-img">
+                <div class="blog-content">
+                    <div class="blog-title">How to form new habits and break bad ones?</div>
+                    <a href="https://medium.com/readers-club/the-habit-blueprint-5d8fbfca8ee9" target="_blank" class="read-btn">Read Article</a>
+                </div>
+            </div>
+            <div class="blog-tile">
+                <img src="https://images.unsplash.com/photo-1490730141103-6cac27aaab94?auto=format&fit=crop&w=600" class="blog-img">
+                <div class="blog-content">
+                    <div class="blog-title">5 Things to Do Every Morning for a Happier, More Productive Life</div>
+                    <a href="https://suryab0002.medium.com/5-things-to-do-every-morning-for-a-happier-more-productive-life-7fd50aa7630f" target="_blank" class="read-btn">Read Article</a>
+                </div>
+            </div>
+            <div class="blog-tile">
+                <img src="https://images.unsplash.com/photo-1546678076-c0012adfcdd9?q=80&w=2037&auto=format&fit=crop&ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D" class="blog-img">
+                <div class="blog-content">
+                    <div class="blog-title">The Art of Feeling Enough</div>
+                    <a href="https://medium.com/readers-club/the-art-of-feeling-enough-eb78ee966ef2" target="_blank" class="read-btn">Read Article</a>
+                </div>
+            </div>
+            <div class="blog-tile">
+                <img src="https://images.unsplash.com/photo-1474418397713-7ede21d49118?auto=format&fit=crop&w=600" class="blog-img">
+                <div class="blog-content">
+                    <div class="blog-title">The Weight of What You Can’t Control</div>
+                    <a href="https://suryab0002.medium.com/the-weight-of-what-you-cant-control-01b2d26d44de" target="_blank" class="read-btn">Read Article</a>
+                </div>
+            </div>
+        </div>
+        <div class="overlay-footer">
+            © Medium - <a href="https://medium.com/@suryab0002" target="_blank">Surya Balasubramanian</a>. All rights reserved.
+        </div>
+    </div>
 
     <div id="home-view" class="view active">
         <h1>Breathing Timer</h1>
@@ -110,7 +286,6 @@
 
     <div id="setup-view" class="view">
         <h2 id="setup-title" style="font-weight:300;">Setup</h2>
-        
         <div class="setting-group">
             <span class="setting-label">Warmup</span>
             <div class="btn-group" id="warmup-opts">
@@ -120,9 +295,7 @@
                 <button class="opt-btn" onclick="setWarmup(90, this)">90s</button>
             </div>
         </div>
-
         <div id="dynamic-setup" class="setting-group"></div>
-        
         <button id="startBtn" onclick="initiateSession()">BEGIN SESSION</button>
         <div class="back-btn" onclick="location.reload()">Cancel</div>
     </div>
@@ -135,7 +308,6 @@
         <div id="phase-label" style="font-size:1.8rem; letter-spacing:2px; margin-top:10px">Preparing...</div>
         <div id="warmup-tip" style="min-height: 50px; margin-top: 10px; color: #94a3b8; font-style: italic; line-height: 1.4;"></div>
         <div id="cycle-info" style="margin-top:10px; color:#94a3b8"></div>
-        
         <button id="resetBtn" onclick="location.reload()">RESET SESSION</button>
     </div>
 
@@ -151,6 +323,12 @@
         };
 
         let activeKey = '', selectedWarmup = 0, userCycles = 4, userBoxSize = 4, userBPM = 6, audioCtx;
+
+        function toggleMenu() { document.getElementById('side-menu').classList.toggle('open'); }
+        function toggleBlogs() { 
+            document.getElementById('blog-overlay').classList.toggle('active'); 
+            if(document.getElementById('side-menu').classList.contains('open')) toggleMenu();
+        }
 
         function init() {
             const container = document.getElementById('menu-container');
@@ -219,28 +397,6 @@
             window.speechSynthesis.speak(new SpeechSynthesisUtterance(''));
         }
 
-        function playRisingSweep(dur) {
-            if (!audioCtx) unlockAudio();
-            const o = audioCtx.createOscillator(), g = audioCtx.createGain();
-            o.frequency.setValueAtTime(180, audioCtx.currentTime);
-            o.frequency.linearRampToValueAtTime(400, audioCtx.currentTime + dur);
-            g.gain.setValueAtTime(0, audioCtx.currentTime);
-            g.gain.linearRampToValueAtTime(0.08, audioCtx.currentTime + 0.3);
-            g.gain.setValueAtTime(0.08, audioCtx.currentTime + dur - 0.2);
-            g.gain.linearRampToValueAtTime(0, audioCtx.currentTime + dur);
-            o.connect(g); g.connect(audioCtx.destination); o.start(); o.stop(audioCtx.currentTime + dur);
-        }
-
-        function playFallingChime(dur) {
-            if (!audioCtx) unlockAudio();
-            const o = audioCtx.createOscillator(), g = audioCtx.createGain();
-            o.frequency.setValueAtTime(400, audioCtx.currentTime);
-            o.frequency.exponentialRampToValueAtTime(180, audioCtx.currentTime + dur);
-            g.gain.setValueAtTime(0.08, audioCtx.currentTime);
-            g.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + dur);
-            o.connect(g); g.connect(audioCtx.destination); o.start(); o.stop(audioCtx.currentTime + dur);
-        }
-
         function playBell() {
             if (!audioCtx) unlockAudio();
             [240, 480, 720].forEach((f, i) => {
@@ -272,10 +428,6 @@
 
             if (activeKey === 'custom') {
                 const i = parseInt(document.getElementById('cIn').value), h = parseInt(document.getElementById('cHold').value), o = parseInt(document.getElementById('cOut').value);
-                if(i < 1 || o < 1) {
-                    alert("Breathe In and Out must be at least 1 second.");
-                    return;
-                }
                 steps = tech.getSteps(i, h, o);
             } else if (activeKey === 'box') { steps = tech.getSteps(userBoxSize); }
             else if (activeKey === 'paced') { steps = tech.getSteps(userBPM); }
@@ -288,10 +440,6 @@
             if (tech.mode !== 'cycles') {
                 const m = parseInt(document.getElementById('minIn').value) || 0, s = parseInt(document.getElementById('secIn').value) || 0;
                 const totalTimeReq = (m * 60) + s;
-                if (totalTimeReq <= 0) {
-                    alert("Please enter a valid duration.");
-                    return;
-                }
                 loops = Math.ceil(totalTimeReq / cycleDur);
             }
 
@@ -315,8 +463,6 @@
                 for(let step of steps) {
                     document.getElementById('phase-label').innerText = step.label;
                     document.getElementById('circle').style.backgroundColor = step.color;
-                    if(tech.audioStyle === 'sweeps') { (step.label === 'In' || step.label === 'Inhale') ? playRisingSweep(step.duration) : playFallingChime(step.duration); }
-                    
                     for(let i = 1; i <= step.duration; i++) {
                         document.getElementById('counter').innerText = i;
                         const s = step.grow ? 0.5 + (i/step.duration) : 1.5 - (i/step.duration);
