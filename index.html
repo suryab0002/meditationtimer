@@ -182,9 +182,9 @@
             if (key === 'custom') {
                 html = `<span class="setting-label">Step Durations (Seconds)</span>
                     <div class="custom-inputs">
-                        <div class="custom-box"><span>In</span><input type="number" id="cIn" value="4" min="1" max="60"></div>
-                        <div class="custom-box"><span>Hold</span><input type="number" id="cHold" value="0" min="0" max="60"></div>
-                        <div class="custom-box"><span>Out</span><input type="number" id="cOut" value="5" min="1" max="60"></div>
+                        <div class="custom-box"><span>In</span><input type="number" id="cIn" value="4" min="1" max="60" oninput="validNum(this, 1, 60)"></div>
+                        <div class="custom-box"><span>Hold</span><input type="number" id="cHold" value="0" min="0" max="60" oninput="validNum(this, 0, 60)"></div>
+                        <div class="custom-box"><span>Out</span><input type="number" id="cOut" value="5" min="1" max="60" oninput="validNum(this, 1, 60)"></div>
                     </div>`;
             } else if (key === 'box') {
                 html = `<span class="setting-label">Box Size</span><div class="btn-group" style="margin-bottom:20px">${[4,5,6].map(n => `<button class="opt-btn ${n==4?'active':''}" onclick="userBoxSize=${n}; highlight(this)">${n}s</button>`).join('')}</div>`;
@@ -195,15 +195,16 @@
             }
 
             if (tech.mode !== 'cycles') {
-                html += `<span class="setting-label">Total Duration</span><div style="display:flex; gap:10px; align-items:center; justify-content:center"><input type="number" id="minIn" value="2" min="0" max="60" oninput="validNum(this)"> min <input type="number" id="secIn" value="00" min="0" max="60" oninput="validNum(this)"> sec</div>`;
+                html += `<span class="setting-label">Total Duration</span><div style="display:flex; gap:10px; align-items:center; justify-content:center"><input type="number" id="minIn" value="2" min="0" max="60" oninput="validNum(this, 0, 60)"> min <input type="number" id="secIn" value="00" min="0" max="60" oninput="validNum(this, 0, 60)"> sec</div>`;
             }
             dynamicArea.innerHTML = html;
         }
 
-        function validNum(input) {
+        function validNum(input, min, max) {
             let val = parseInt(input.value);
-            if (val < 0) input.value = 0;
-            if (val > 60) input.value = 60;
+            if (isNaN(val)) return;
+            if (val < min) input.value = min;
+            if (val > max) input.value = max;
         }
 
         function highlight(btn) { btn.parentElement.querySelectorAll('button').forEach(b => b.classList.remove('active')); btn.classList.add('active'); }
@@ -271,7 +272,10 @@
 
             if (activeKey === 'custom') {
                 const i = parseInt(document.getElementById('cIn').value), h = parseInt(document.getElementById('cHold').value), o = parseInt(document.getElementById('cOut').value);
-                if(i < 1 || o < 1) return;
+                if(i < 1 || o < 1) {
+                    alert("Breathe In and Out must be at least 1 second.");
+                    return;
+                }
                 steps = tech.getSteps(i, h, o);
             } else if (activeKey === 'box') { steps = tech.getSteps(userBoxSize); }
             else if (activeKey === 'paced') { steps = tech.getSteps(userBPM); }
