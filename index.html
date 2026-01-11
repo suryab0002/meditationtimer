@@ -145,10 +145,21 @@
         };
 
         let activeKey = '', selectedWarmup = 0, userCycles = 4, userBoxSize = 4, userBPM = 6, audioCtx;
+        let maleVoice = null;
+
+        // FIXED: Robust male voice selection for all devices
+        function setVoice() {
+            const voices = window.speechSynthesis.getVoices();
+            // Try to find a specific soothing male voice
+            maleVoice = voices.find(v => (v.name.includes('Male') || v.name.includes('David') || v.name.includes('Daniel') || v.name.includes('Google UK Male')) && v.lang.includes('en')) || 
+                        voices.find(v => v.name.includes('Male')) || 
+                        voices[0];
+        }
+
+        window.speechSynthesis.onvoiceschanged = setVoice;
 
         function init() {
             const container = document.getElementById('menu-container');
-            // Reordered loop logic ensures 'custom' appears last if object is sorted by definition
             Object.keys(TECHNIQUES).forEach(key => {
                 const tech = TECHNIQUES[key];
                 const card = document.createElement('div');
@@ -157,6 +168,7 @@
                 card.innerHTML = `<h3>${tech.title}</h3><p>${tech.desc}</p>`;
                 container.appendChild(card);
             });
+            setVoice();
         }
 
         function setWarmup(val, btn) {
@@ -198,7 +210,7 @@
         function highlight(btn) { btn.parentElement.querySelectorAll('button').forEach(b => b.classList.remove('active')); btn.classList.add('active'); }
 
         function playRisingSweep(dur) {
-            if (!audioCtx) audioCtx = new AudioContext();
+            if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
             const o = audioCtx.createOscillator(), g = audioCtx.createGain();
             o.frequency.setValueAtTime(180, audioCtx.currentTime);
             o.frequency.linearRampToValueAtTime(400, audioCtx.currentTime + dur);
@@ -210,7 +222,7 @@
         }
 
         function playFallingChime(dur) {
-            if (!audioCtx) audioCtx = new AudioContext();
+            if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
             const o = audioCtx.createOscillator(), g = audioCtx.createGain();
             o.frequency.setValueAtTime(400, audioCtx.currentTime);
             o.frequency.exponentialRampToValueAtTime(180, audioCtx.currentTime + dur);
@@ -220,7 +232,7 @@
         }
 
         function playBell() {
-            if (!audioCtx) audioCtx = new AudioContext();
+            if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
             [240, 480, 720].forEach((f, i) => {
                 const o = audioCtx.createOscillator(), g = audioCtx.createGain();
                 o.frequency.setValueAtTime(f, audioCtx.currentTime);
@@ -230,10 +242,15 @@
             });
         }
 
+        // FIXED: Standardized soothing male voice and volume
         function speak(text) {
             window.speechSynthesis.cancel();
             const u = new SpeechSynthesisUtterance(text);
-            u.volume = 0.4; u.rate = 1.0; window.speechSynthesis.speak(u);
+            if (maleVoice) u.voice = maleVoice;
+            u.volume = 0.4; // 40% Volume (Lowered)
+            u.pitch = 0.85; // Slightly deeper for soothing effect
+            u.rate = 0.9;   // Slightly slower for calming effect
+            window.speechSynthesis.speak(u);
         }
 
         const waitOneSec = () => new Promise(r => {
@@ -243,6 +260,14 @@
         });
 
         async function initiateSession() {
+            // FIXED: iPhone unlock - Resume AudioContext and play silent speech
+            if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+            if (audioCtx.state === 'suspended') audioCtx.resume();
+            
+            // This "unlocks" speech on iOS Safari
+            const wakeup = new SpeechSynthesisUtterance("");
+            window.speechSynthesis.speak(wakeup);
+
             const tech = TECHNIQUES[activeKey];
             let steps, totalTimeReq = 0;
 
