@@ -503,6 +503,7 @@
             source.buffer = audioCtx.createBuffer(1, 1, 22050);
             source.connect(audioCtx.destination);
             source.start(0);
+            if (!voicesReady) primeVoices();
         }
 
         // Soft singing-bowl style bell: layered detuned tones through a gentle lowpass, long warm decay.
@@ -526,26 +527,58 @@
             });
         }
 
-        // Pick the calmest available system voice once, and cache it.
+        // Score every available voice and cache the calmest one. Desktop and mobile browsers
+        // expose very different voice lists (and mobile often populates the list late, only
+        // after a user gesture), so this scores whatever is actually present instead of
+        // matching a fixed set of desktop voice names.
+        let voicesReady = false;
+        function scoreVoice(v) {
+            const name = v.name.toLowerCase();
+            let score = 0;
+            // Named voices known to sound calm/natural across platforms (desktop + mobile).
+            const warm = ['samantha', 'moira', 'karen', 'serena', 'fiona', 'tessa', 'victoria', 'aria', 'jenny', 'libby', 'sonia', 'zira'];
+            if (warm.some(n => name.includes(n))) score += 5;
+            // Quality hints some engines expose.
+            if (/enhanced|premium|natural|neural/.test(name)) score += 4;
+            if (/compact/.test(name)) score -= 3; // low-quality iOS fallback voice
+            if (/female/.test(name)) score += 2;
+            if (v.lang && v.lang.toLowerCase().startsWith('en')) score += 3;
+            if (v.lang && /en-us|en-gb|en-au/i.test(v.lang)) score += 1;
+            if (v.localService) score += 1; // more reliable, less latency than networked voices
+            if (v.default) score += 1;
+            return score;
+        }
         function primeVoices() {
             const pick = () => {
                 const voices = window.speechSynthesis.getVoices();
-                if (!voices.length) return;
-                const preferredNames = ['samantha', 'moira', 'karen', 'serena', 'fiona', 'google uk english female', 'google us english', 'zira', 'aria'];
-                calmVoice = voices.find(v => preferredNames.some(name => v.name.toLowerCase().includes(name)))
-                    || voices.find(v => /female/i.test(v.name) && v.lang.startsWith('en'))
-                    || voices.find(v => v.lang.startsWith('en'))
-                    || voices[0];
+                if (!voices.length) return false;
+                calmVoice = voices.slice().sort((a, b) => scoreVoice(b) - scoreVoice(a))[0];
+                voicesReady = true;
+                return true;
             };
-            pick();
+            if (!pick()) {
+                // Mobile browsers (esp. iOS Safari, Android WebView) often report an empty
+                // voice list until the engine finishes loading — poll briefly as a fallback.
+                let attempts = 0;
+                const poll = setInterval(() => {
+                    attempts++;
+                    if (pick() || attempts > 20) clearInterval(poll);
+                }, 250);
+            }
             if (window.speechSynthesis.onvoiceschanged !== undefined) window.speechSynthesis.onvoiceschanged = pick;
         }
 
         function speak(text) {
-            window.speechSynthesis.cancel();
+            // Re-check on first real use too: some mobile browsers only finalize the voice
+            // list right after the first user-triggered speech call.
+            if (!voicesReady) primeVoices();
+            // Only cut off a voice that's actually mid-sentence — cancelling on every single
+            // call makes some mobile TTS engines clip the start of each word, which sounds
+            // choppy rather than calm.
+            if (window.speechSynthesis.speaking) window.speechSynthesis.cancel();
             const u = new SpeechSynthesisUtterance(text);
-            if (calmVoice) u.voice = calmVoice;
-            u.lang = 'en-US';
+            if (calmVoice) { u.voice = calmVoice; u.lang = calmVoice.lang; }
+            else u.lang = 'en-US';
             u.volume = 0.55;   // gentle, not intrusive
             u.rate = 0.82;     // slower, unhurried pace
             u.pitch = 0.92;    // slightly lower, warmer tone
