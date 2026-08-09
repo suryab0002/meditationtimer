@@ -3,19 +3,30 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="theme-color" content="#0a0e1a">
+    <meta name="description" content="A calm, guided breathing timer with soothing spoken cues.">
     <title>Breathing Timer Hub</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,300;9..144,400;9..144,500&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
     <style>
         :root {
-            --bg: #0f172a;
-            --accent: #38bdf8;
-            --text: #f8fafc;
-            --panel: #1e293b;
-            --inhale: #38bdf8;
-            --hold: #fbbf24;
-            --exhale: #2dd4bf;
-            --hold-empty: #818cf8;
-            --error: #ef4444;
+            --bg-1: #080b16;
+            --bg-2: #131c37;
+            --panel: rgba(255,255,255,0.045);
+            --panel-border: rgba(255,255,255,0.09);
+            --text: #f2f4f8;
+            --text-dim: #93a1bb;
+            --accent: #7dd3fc;
+            --inhale: #7dd3fc;
+            --hold: #eab86e;
+            --exhale: #5eead4;
+            --hold-empty: #b4bcf8;
+            --error: #f87171;
+            --ease-breath: cubic-bezier(0.45, 0, 0.55, 1);
         }
+
+        * { box-sizing: border-box; }
 
         body {
             margin: 0;
@@ -24,11 +35,29 @@
             flex-direction: column;
             justify-content: center;
             align-items: center;
-            background-color: var(--bg);
+            background: radial-gradient(120% 90% at 50% -10%, var(--bg-2) 0%, var(--bg-1) 55%);
             color: var(--text);
-            font-family: 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+            font-family: 'Inter', -apple-system, Helvetica, Arial, sans-serif;
             overflow-x: hidden;
+            position: relative;
         }
+
+        /* Ambient drifting glow — purely decorative */
+        .ambient { position: fixed; inset: 0; z-index: -1; overflow: hidden; pointer-events: none; }
+        .ambient span {
+            position: absolute;
+            width: 45vw; height: 45vw;
+            border-radius: 50%;
+            filter: blur(90px);
+            opacity: 0.18;
+            animation: drift 34s ease-in-out infinite alternate;
+        }
+        .ambient span:nth-child(1) { background: var(--inhale); top: -10%; left: -10%; }
+        .ambient span:nth-child(2) { background: var(--exhale); bottom: -15%; right: -10%; animation-duration: 40s; animation-delay: -6s; }
+        @keyframes drift { from { transform: translate(0,0) scale(1); } to { transform: translate(6vw, 8vh) scale(1.15); } }
+        @media (prefers-reduced-motion: reduce) { .ambient span { animation: none; } }
+
+        h1, h2 { font-family: 'Fraunces', Georgia, serif; font-weight: 300; letter-spacing: 0.3px; }
 
         /* Burger Menu & Blog Overlay Styles */
         #burger-icon {
@@ -37,11 +66,14 @@
             right: 20px;
             z-index: 1000;
             cursor: pointer;
-            padding: 10px;
+            padding: 11px;
             background: var(--panel);
-            border-radius: 8px;
-            border: 1px solid #334155;
+            backdrop-filter: blur(10px);
+            border-radius: 10px;
+            border: 1px solid var(--panel-border);
+            transition: border-color 0.2s;
         }
+        #burger-icon:hover { border-color: var(--accent); }
 
         #side-menu {
             position: fixed;
@@ -49,14 +81,15 @@
             right: -300px;
             width: 260px;
             height: 100%;
-            background: var(--panel);
+            background: linear-gradient(180deg, var(--bg-2), var(--bg-1));
+            border-left: 1px solid var(--panel-border);
             z-index: 1001;
-            transition: 0.3s ease;
-            box-shadow: -5px 0 15px rgba(0,0,0,0.5);
+            transition: right 0.35s ease;
+            box-shadow: -20px 0 40px rgba(0,0,0,0.35);
             padding: 30px 20px;
             display: flex;
             flex-direction: column;
-            gap: 20px;
+            gap: 14px;
         }
 
         #side-menu.open { right: 0; }
@@ -66,226 +99,218 @@
             background: transparent;
             color: var(--accent);
             border: 1px solid var(--accent);
-            padding: 5px 15px;
-            border-radius: 5px;
+            padding: 6px 16px;
+            border-radius: 20px;
             cursor: pointer;
-            margin-bottom: 20px;
+            margin-bottom: 16px;
+            font-family: inherit;
         }
 
         .menu-link {
             color: var(--text);
             text-decoration: none;
-            padding: 12px;
-            border-radius: 8px;
-            background: rgba(255,255,255,0.05);
+            padding: 12px 14px;
+            border-radius: 10px;
+            background: var(--panel);
+            border: 1px solid transparent;
             transition: 0.2s;
             font-size: 0.95rem;
             cursor: pointer;
-            border: none;
             text-align: left;
+            font-family: inherit;
         }
 
-        .menu-link:hover { background: var(--accent); color: var(--bg); }
-        .menu-section-title { font-size: 0.75rem; text-transform: uppercase; color: #94a3b8; letter-spacing: 1px; margin-top: 10px; }
+        .menu-link:hover { border-color: var(--accent); color: var(--accent); }
+        .menu-section-title { font-size: 0.72rem; text-transform: uppercase; color: var(--text-dim); letter-spacing: 1.5px; margin: 8px 0 -2px; }
 
         /* Blog Overlay Grid */
         #blog-overlay {
             position: fixed;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            background: var(--bg);
+            top: 0; left: 0;
+            width: 100%; height: 100%;
+            background: var(--bg-1);
             z-index: 2000;
             display: none;
             overflow-y: auto;
-            padding: 40px 20px;
-            box-sizing: border-box;
+            padding: 40px 20px 20px;
         }
 
         #blog-overlay.active { display: block; }
 
-        .overlay-header {
-            max-width: 1200px;
-            margin: 0 auto 40px;
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-        }
+        .overlay-header { max-width: 1200px; margin: 0 auto 40px; display: flex; justify-content: space-between; align-items: center; }
 
-        .blog-grid {
-            display: grid;
-            grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
-            gap: 20px;
-            max-width: 1200px;
-            margin: 0 auto;
-        }
+        .blog-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); gap: 20px; max-width: 1200px; margin: 0 auto; }
+        @media (min-width: 1100px) { .blog-grid { grid-template-columns: repeat(4, 1fr); } }
 
-        @media (min-width: 1100px) {
-            .blog-grid { grid-template-columns: repeat(4, 1fr); }
-        }
-
-        .blog-tile {
-            background: var(--panel);
-            border-radius: 12px;
-            overflow: hidden;
-            border: 1px solid #334155;
-            transition: 0.3s;
-            display: flex;
-            flex-direction: column;
-            height: 100%;
-            min-height: 380px;
-        }
-
+        .blog-tile { background: var(--panel); backdrop-filter: blur(10px); border-radius: 14px; overflow: hidden; border: 1px solid var(--panel-border); transition: 0.3s; display: flex; flex-direction: column; height: 100%; min-height: 380px; }
         .blog-tile:hover { transform: translateY(-5px); border-color: var(--accent); }
-
-        .blog-img {
-            width: 100%;
-            height: 180px;
-            background: #1e293b;
-            object-fit: cover;
-            display: block;
-        }
-
+        .blog-img { width: 100%; height: 180px; background: var(--bg-2); object-fit: cover; display: block; }
         .blog-content { padding: 18px; flex-grow: 1; display: flex; flex-direction: column; }
         .blog-title { font-size: 1rem; margin-bottom: 15px; line-height: 1.4; color: var(--text); font-weight: 500; }
-        
-        .read-btn {
-            margin-top: auto;
-            background: var(--accent);
-            color: var(--bg);
-            text-decoration: none;
-            text-align: center;
-            padding: 10px;
-            border-radius: 6px;
-            font-weight: bold;
-            font-size: 0.85rem;
-        }
 
-        /* Overlay Footer Style */
-        .overlay-footer {
-            max-width: 1200px;
-            margin: 60px auto 20px;
-            text-align: center;
-            padding-top: 20px;
-            border-top: 1px solid #334155;
-            color: #94a3b8;
-            font-size: 0.85rem;
-        }
+        .read-btn { margin-top: auto; background: var(--accent); color: var(--bg-1); text-decoration: none; text-align: center; padding: 10px; border-radius: 8px; font-weight: 600; font-size: 0.85rem; }
 
-        .overlay-footer a {
-            color: var(--accent);
-            text-decoration: none;
-        }
-
-        .overlay-footer a:hover {
-            text-decoration: underline;
-        }
+        .overlay-footer { max-width: 1200px; margin: 60px auto 20px; text-align: center; padding-top: 20px; border-top: 1px solid var(--panel-border); color: var(--text-dim); font-size: 0.85rem; }
+        .overlay-footer a { color: var(--accent); text-decoration: none; }
+        .overlay-footer a:hover { text-decoration: underline; }
 
         /* --- Meditation App Styles --- */
-        .view { display: none; text-align: center; width: 90%; max-width: 550px; padding: 20px; flex-direction: column; align-items: center; justify-content: center; }
+        .view { display: none; text-align: center; width: 90%; max-width: 550px; padding: 20px; flex-direction: column; align-items: center; justify-content: center; opacity: 0; transition: opacity 0.5s ease; }
         .view.active { display: flex; }
-        h1 { font-size: clamp(2rem, 8vw, 3rem); font-weight: 300; margin-bottom: 30px; }
-        .menu-grid { display: flex; flex-direction: column; gap: 15px; width: 100%; }
-        .main-card { background: var(--panel); border: 1px solid #334155; padding: 25px; border-radius: 15px; cursor: pointer; transition: all 0.3s ease; text-align: center; width: 100%; box-sizing: border-box; }
-        .main-card:hover { border-color: var(--accent); transform: translateY(-3px); }
-        .main-card h3 { margin: 0 0 8px 0; color: var(--accent); font-weight: 400; font-size: 1.25rem; }
-        .main-card p { margin: 0; color: #94a3b8; font-size: 0.9rem; line-height: 1.4; }
+        .view.active.show { opacity: 1; }
+
+        h1 { font-size: clamp(2rem, 8vw, 3rem); margin-bottom: 6px; }
+        .tagline { color: var(--text-dim); font-size: 0.95rem; margin-bottom: 34px; letter-spacing: 0.2px; }
+
+        .menu-grid { display: flex; flex-direction: column; gap: 14px; width: 100%; }
+        .main-card {
+            background: var(--panel);
+            backdrop-filter: blur(10px);
+            border: 1px solid var(--panel-border);
+            padding: 22px 24px;
+            border-radius: 16px;
+            cursor: pointer;
+            transition: all 0.25s ease;
+            text-align: left;
+            width: 100%;
+            display: flex;
+            align-items: center;
+            gap: 16px;
+        }
+        .main-card:hover { border-color: var(--accent); transform: translateY(-3px); background: rgba(255,255,255,0.07); }
+        .main-card .card-icon { flex-shrink: 0; width: 40px; height: 40px; opacity: 0.85; }
+        .main-card h3 { margin: 0 0 4px 0; color: var(--text); font-weight: 500; font-size: 1.08rem; font-family: 'Inter', sans-serif; }
+        .main-card p { margin: 0; color: var(--text-dim); font-size: 0.87rem; line-height: 1.4; }
+
         .setting-group { margin-bottom: 25px; width: 100%; text-align: center; }
-        .setting-label { display: block; margin-bottom: 12px; color: #94a3b8; text-transform: uppercase; font-size: 0.75rem; letter-spacing: 1px; }
+        .setting-label { display: block; margin-bottom: 12px; color: var(--text-dim); text-transform: uppercase; font-size: 0.72rem; letter-spacing: 1.5px; }
         .btn-group { display: flex; gap: 10px; justify-content: center; flex-wrap: wrap; }
-        .bpm-btn, .opt-btn { background: var(--panel); border: 1px solid #334155; color: white; padding: 12px 20px; border-radius: 8px; cursor: pointer; transition: 0.2s; font-size: 0.9rem; }
-        .opt-btn.active, .bpm-btn.active { background: var(--accent); border-color: var(--accent); color: var(--bg); font-weight: bold; }
+        .bpm-btn, .opt-btn {
+            background: var(--panel); border: 1px solid var(--panel-border); color: var(--text);
+            padding: 11px 18px; border-radius: 10px; cursor: pointer; transition: 0.2s; font-size: 0.9rem; font-family: inherit;
+        }
+        .opt-btn.active, .bpm-btn.active { background: var(--accent); border-color: var(--accent); color: var(--bg-1); font-weight: 600; }
+        .opt-btn:focus-visible, .bpm-btn:focus-visible, button:focus-visible, input:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+
         .custom-inputs { display: flex; gap: 10px; justify-content: center; align-items: center; margin-bottom: 20px; }
         .custom-box { display: flex; flex-direction: column; align-items: center; gap: 5px; }
-        .custom-box span { font-size: 0.7rem; color: #94a3b8; }
-        input[type="number"] { background: var(--panel); border: 1px solid #334155; color: white; padding: 12px; width: 70px; border-radius: 8px; text-align: center; font-size: 1.1rem; }
+        .custom-box span { font-size: 0.7rem; color: var(--text-dim); }
+        input[type="number"] { background: var(--panel); border: 1px solid var(--panel-border); color: var(--text); padding: 12px; width: 68px; border-radius: 10px; text-align: center; font-size: 1.05rem; font-family: inherit; }
+
         #visual-hub { position: relative; width: clamp(240px, 60vw, 300px); height: clamp(240px, 60vw, 300px); display: flex; justify-content: center; align-items: center; margin: 20px 0; }
-        #circle { position: absolute; width: 100%; height: 100%; border-radius: 50%; background: var(--accent); opacity: 0.2; transform: scale(0.5); transition: transform 1s linear, background-color 0.8s ease; }
-        #counter { font-size: clamp(4rem, 15vw, 5.5rem); font-weight: 200; z-index: 10; }
-        #startBtn { margin-top: 20px; padding: 18px 60px; font-size: 1.1rem; background: white; color: black; border: none; border-radius: 50px; cursor: pointer; font-weight: bold; width: 100%; max-width: 300px; }
-        #resetBtn { margin-top: 30px; padding: 12px 40px; font-size: 0.9rem; background: transparent; color: #94a3b8; border: 1px solid #334155; border-radius: 50px; cursor: pointer; transition: 0.2s; }
+        #orb-wrapper { position: absolute; width: 100%; height: 100%; transform: scale(0.5); transition: transform 1s var(--ease-breath); }
+        #ring-outer, #ring-inner, #circle {
+            position: absolute; inset: 0; border-radius: 50%; background: var(--accent);
+        }
+        #ring-outer { opacity: 0.10; filter: blur(26px); transform: scale(1.5); }
+        #ring-inner { opacity: 0.20; filter: blur(12px); transform: scale(1.18); }
+        #circle { opacity: 0.85; box-shadow: 0 0 60px 0 rgba(125, 211, 252, 0.25); }
+
+        #counter { position: relative; font-family: 'Fraunces', serif; font-size: clamp(3.6rem, 14vw, 5rem); font-weight: 300; z-index: 10; }
+
+        #phase-label { font-size: 1.5rem; letter-spacing: 3px; margin-top: 6px; font-weight: 500; text-transform: uppercase; min-height: 1.6em; }
+
+        .progress-dots { display: flex; gap: 8px; justify-content: center; margin-top: 6px; }
+        .progress-dots .dot { width: 7px; height: 7px; border-radius: 50%; background: var(--panel-border); transition: 0.3s; }
+        .progress-dots .dot.done { background: var(--accent); }
+        .progress-dots .dot.current { background: var(--text); transform: scale(1.3); }
+
+        .controls-row { display: flex; gap: 12px; margin-top: 26px; width: 100%; max-width: 340px; }
+        #startBtn { padding: 17px 60px; font-size: 1.02rem; background: var(--text); color: var(--bg-1); border: none; border-radius: 50px; cursor: pointer; font-weight: 600; width: 100%; letter-spacing: 0.3px; transition: transform 0.15s ease, opacity 0.15s ease; }
+        #startBtn:hover { transform: translateY(-2px); }
+        #pauseBtn, #resetBtn {
+            flex: 1; padding: 12px 10px; font-size: 0.88rem; background: transparent; color: var(--text-dim);
+            border: 1px solid var(--panel-border); border-radius: 50px; cursor: pointer; transition: 0.2s; font-family: inherit;
+        }
+        #pauseBtn:hover { border-color: var(--accent); color: var(--accent); }
         #resetBtn:hover { border-color: var(--error); color: var(--error); }
-        .back-btn { margin-top: 20px; color: #475569; cursor: pointer; font-size: 0.9rem; text-decoration: underline; }
-        footer { padding: 20px 0; text-align: center; font-size: 0.8rem; color: #475569; width: 100%; }
+
+        .back-btn { margin-top: 18px; color: #56618a; cursor: pointer; font-size: 0.9rem; text-decoration: underline; background: none; border: none; font-family: inherit; }
+
+        #warmup-tip { min-height: 46px; margin-top: 10px; color: var(--text-dim); font-style: italic; line-height: 1.5; font-size: 0.95rem; }
+        #cycle-info { margin-top: 4px; color: var(--text-dim); font-size: 0.88rem; }
+        #closing-note { color: var(--text-dim); font-size: 0.95rem; margin-top: 8px; min-height: 1.4em; }
+
+        footer { padding: 24px 0 18px; text-align: center; font-size: 0.8rem; color: #46507a; width: 100%; }
     </style>
 </head>
 <body>
 
-    <div id="burger-icon" onclick="toggleMenu()">
-        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="3" y1="12" x2="21" y2="12"></line><line x1="3" y1="6" x2="21" y2="6"></line><line x1="3" y1="18" x2="21" y2="18"></line></svg>
+    <div class="ambient" aria-hidden="true"><span></span><span></span></div>
+
+    <div id="burger-icon" onclick="toggleMenu()" role="button" aria-label="Open menu" tabindex="0">
+        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="3" y1="12" x2="21" y2="12"></line><line x1="3" y1="6" x2="21" y2="6"></line><line x1="3" y1="18" x2="21" y2="18"></line></svg>
     </div>
 
-    <div id="side-menu">
+    <div id="side-menu" aria-hidden="true">
         <button class="menu-close-btn" onclick="toggleMenu()">← Back</button>
         <div class="menu-section-title">Author</div>
         <a href="https://medium.com/@suryab0002" target="_blank" class="menu-link">My Blogsite</a>
-        
+
         <div class="menu-section-title">Content</div>
         <button class="menu-link" onclick="toggleBlogs()">Top Blogs</button>
     </div>
 
     <div id="blog-overlay">
         <div class="overlay-header">
-            <h2 style="font-weight: 300; color: var(--accent);">Top Blogs</h2>
+            <h2 style="color: var(--accent); margin:0;">Top Blogs</h2>
             <button class="menu-close-btn" onclick="toggleBlogs()">Close ✕</button>
         </div>
         <div class="blog-grid">
             <div class="blog-tile">
-                <img src="https://images.unsplash.com/photo-1506126613408-eca07ce68773?auto=format&fit=crop&w=600" class="blog-img">
+                <img src="https://images.unsplash.com/photo-1506126613408-eca07ce68773?auto=format&fit=crop&w=600" class="blog-img" loading="lazy" alt="">
                 <div class="blog-content">
                     <div class="blog-title">Powerful Anchors to Deepen Your Meditation Practice</div>
                     <a href="https://medium.com/readers-club/powerful-anchors-to-deepen-your-meditation-practice-fbab9bccf456" target="_blank" class="read-btn">Read Article</a>
                 </div>
             </div>
             <div class="blog-tile">
-                <img src="https://images.unsplash.com/photo-1528715471579-d1bcf0ba5e83?auto=format&fit=crop&w=600" class="blog-img">
+                <img src="https://images.unsplash.com/photo-1528715471579-d1bcf0ba5e83?auto=format&fit=crop&w=600" class="blog-img" loading="lazy" alt="">
                 <div class="blog-content">
                     <div class="blog-title">The One Practice That Reduces Stress, Boosts Focus, and Improves Your Health</div>
                     <a href="https://medium.com/illumination/the-one-practice-that-reduces-stress-boosts-focus-and-improves-your-health-e17f2c483f87" target="_blank" class="read-btn">Read Article</a>
                 </div>
             </div>
             <div class="blog-tile">
-                <img src="https://images.unsplash.com/photo-1484480974693-6ca0a78fb36b?auto=format&fit=crop&w=600" class="blog-img">
+                <img src="https://images.unsplash.com/photo-1484480974693-6ca0a78fb36b?auto=format&fit=crop&w=600" class="blog-img" loading="lazy" alt="">
                 <div class="blog-content">
                     <div class="blog-title">How to form new habits and break bad ones?</div>
                     <a href="https://medium.com/readers-club/the-habit-blueprint-5d8fbfca8ee9" target="_blank" class="read-btn">Read Article</a>
                 </div>
             </div>
             <div class="blog-tile">
-                <img src="https://images.unsplash.com/photo-1490730141103-6cac27aaab94?auto=format&fit=crop&w=600" class="blog-img">
+                <img src="https://images.unsplash.com/photo-1490730141103-6cac27aaab94?auto=format&fit=crop&w=600" class="blog-img" loading="lazy" alt="">
                 <div class="blog-content">
                     <div class="blog-title">5 Things to Do Every Morning for a Happier, More Productive Life</div>
                     <a href="https://suryab0002.medium.com/5-things-to-do-every-morning-for-a-happier-more-productive-life-7fd50aa7630f" target="_blank" class="read-btn">Read Article</a>
                 </div>
             </div>
             <div class="blog-tile">
-                <img src="https://images.unsplash.com/photo-1546678076-c0012adfcdd9?q=80&w=2037&auto=format&fit=crop&ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D" class="blog-img">
+                <img src="https://images.unsplash.com/photo-1546678076-c0012adfcdd9?q=80&w=2037&auto=format&fit=crop&ixlib=rb-4.1.0" class="blog-img" loading="lazy" alt="">
                 <div class="blog-content">
                     <div class="blog-title">The Art of Feeling Enough</div>
                     <a href="https://medium.com/readers-club/the-art-of-feeling-enough-eb78ee966ef2" target="_blank" class="read-btn">Read Article</a>
                 </div>
             </div>
             <div class="blog-tile">
-                <img src="https://images.unsplash.com/photo-1474418397713-7ede21d49118?auto=format&fit=crop&w=600" class="blog-img">
+                <img src="https://images.unsplash.com/photo-1474418397713-7ede21d49118?auto=format&fit=crop&w=600" class="blog-img" loading="lazy" alt="">
                 <div class="blog-content">
-                    <div class="blog-title">The Weight of What You Can’t Control</div>
+                    <div class="blog-title">The Weight of What You Can't Control</div>
                     <a href="https://suryab0002.medium.com/the-weight-of-what-you-cant-control-01b2d26d44de" target="_blank" class="read-btn">Read Article</a>
                 </div>
             </div>
         </div>
-        <div class="overlay-footer">
-            © Medium - <a href="https://medium.com/@suryab0002" target="_blank">Surya Balasubramanian</a>. All rights reserved.
-        </div>
+        <div class="overlay-footer">© Medium - <a href="https://medium.com/@suryab0002" target="_blank">Surya Balasubramanian</a>. All rights reserved.</div>
     </div>
 
     <div id="home-view" class="view active">
         <h1>Breathing Timer</h1>
+        <div class="tagline">Slow down. Choose a rhythm, and let it guide you.</div>
         <div id="menu-container" class="menu-grid"></div>
     </div>
 
     <div id="setup-view" class="view">
-        <h2 id="setup-title" style="font-weight:300;">Setup</h2>
+        <h2 id="setup-title" style="margin-bottom: 30px;">Setup</h2>
         <div class="setting-group">
             <span class="setting-label">Warmup</span>
             <div class="btn-group" id="warmup-opts">
@@ -296,39 +321,118 @@
             </div>
         </div>
         <div id="dynamic-setup" class="setting-group"></div>
-        <button id="startBtn" onclick="initiateSession()">BEGIN SESSION</button>
-        <div class="back-btn" onclick="location.reload()">Cancel</div>
+        <button id="startBtn" onclick="initiateSession()">Begin session</button>
+        <button class="back-btn" onclick="goHome()">Cancel</button>
     </div>
 
     <div id="active-view" class="view">
         <div id="visual-hub">
-            <div id="circle"></div>
-            <div id="counter">--</div>
+            <div id="orb-wrapper">
+                <div id="ring-outer"></div>
+                <div id="ring-inner"></div>
+                <div id="circle"></div>
+            </div>
+            <div id="counter" aria-live="off">--</div>
         </div>
-        <div id="phase-label" style="font-size:1.8rem; letter-spacing:2px; margin-top:10px">Preparing...</div>
-        <div id="warmup-tip" style="min-height: 50px; margin-top: 10px; color: #94a3b8; font-style: italic; line-height: 1.4;"></div>
-        <div id="cycle-info" style="margin-top:10px; color:#94a3b8"></div>
-        <button id="resetBtn" onclick="location.reload()">RESET SESSION</button>
+        <div id="phase-label" aria-live="polite">Preparing…</div>
+        <div class="progress-dots" id="progress-dots"></div>
+        <div id="warmup-tip"></div>
+        <div id="cycle-info"></div>
+        <div id="closing-note"></div>
+        <div class="controls-row">
+            <button id="pauseBtn" onclick="togglePause()">Pause</button>
+            <button id="resetBtn" onclick="goHome()">End session</button>
+        </div>
     </div>
 
     <footer>© 2026 suryab0002. All rights reserved.</footer>
 
     <script>
+        const CARD_ICON = `<svg class="card-icon" viewBox="0 0 40 40" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <circle cx="20" cy="20" r="18" stroke="var(--accent)" stroke-width="1" opacity="0.35"/>
+            <circle cx="20" cy="20" r="12" stroke="var(--accent)" stroke-width="1" opacity="0.55"/>
+            <circle cx="20" cy="20" r="6" fill="var(--accent)" opacity="0.8"/>
+        </svg>`;
+
+        // Each step is one of: 'in' (0.5→1.5), 'out' (1.5→0.5), 'holdIn' (stays at 1.5), 'holdOut' (stays at 0.5)
         const TECHNIQUES = {
-            '478': { title: '4-7-8 Technique', desc: 'The "Natural Tranquilizer" for the nervous system.', warmupMsg: "Sit or lie down comfortably, take few deep breaths before emptying your lungs", shape: '50%', mode: 'cycles', speakNumbers: true, audioStyle: 'default', steps: [{ label: 'Inhale', duration: 4, color: 'var(--inhale)', grow: true }, { label: 'Hold', duration: 7, color: 'var(--hold)', grow: true }, { label: 'Exhale', duration: 8, color: 'var(--exhale)', grow: false }] },
-            'box': { title: 'Box Breathing', desc: 'Used by Navy SEALs for focus and mental clarity.', warmupMsg: "Sit or lie down comfortably, take few deep breaths", shape: '20%', mode: 'timer', speakNumbers: true, audioStyle: 'default', getSteps: (size) => [{ label: 'Inhale', duration: size, color: 'var(--inhale)', grow: true }, { label: 'Hold', duration: size, color: 'var(--hold)', grow: true }, { label: 'Exhale', duration: size, color: 'var(--exhale)', grow: false }, { label: 'Hold', duration: size, color: 'var(--hold-empty)', grow: false }] },
-            'breathcount': { title: 'Breath Count', desc: 'Mindful breathing to improve focus.', warmupMsg: "Sit or lie down comfortably, start to focus on your breath", shape: '50%', mode: 'timer', speakNumbers: false, audioStyle: 'default', getSteps: () => [{ label: 'In', duration: 2, color: 'var(--inhale)', grow: true }, { label: 'Out', duration: 2, color: 'var(--exhale)', grow: false }] },
-            'paced': { title: 'Paced Breathing', desc: 'Trigger the "rest and digest" system by slowing your breath.', warmupMsg: "Sit or lie down comfortably, start to focus on your breath", shape: '50%', mode: 'timer', speakNumbers: false, audioStyle: 'sweeps', getSteps: (bpm) => { const tc = 60/bpm; return [{ label: 'In', duration: Math.floor(tc/2), color: 'var(--inhale)', grow: true }, { label: 'Out', duration: Math.ceil(tc/2), color: 'var(--exhale)', grow: false }]; } },
-            'custom': { title: 'Custom In Out Breathe', desc: 'Tip: Exhale longer to have calm relaxing effect.', warmupMsg: "Sit or lie down comfortably, anchor to your breath", shape: '50%', mode: 'custom', speakNumbers: true, audioStyle: 'default', getSteps: (i, h, o) => { let s = [{ label: 'In', duration: i, color: 'var(--inhale)', grow: true }]; if(h > 0) s.push({ label: 'Hold', duration: h, color: 'var(--hold)', grow: true }); s.push({ label: 'Out', duration: o, color: 'var(--exhale)', grow: false }); return s; } }
+            '478': {
+                title: '4-7-8 Technique', desc: 'The "natural tranquilizer" for the nervous system.',
+                warmupMsg: 'Find a comfortable seat or lie down. Take a few easy breaths, then let your lungs empty completely.',
+                mode: 'cycles', speakNumbers: true,
+                steps: [
+                    { label: 'Inhale', type: 'in', duration: 4, color: 'var(--inhale)' },
+                    { label: 'Hold', type: 'holdIn', duration: 7, color: 'var(--hold)' },
+                    { label: 'Exhale', type: 'out', duration: 8, color: 'var(--exhale)' }
+                ]
+            },
+            'box': {
+                title: 'Box Breathing', desc: 'Used by Navy SEALs for focus and calm under pressure.',
+                warmupMsg: 'Settle into a comfortable position and take a few gentle breaths to arrive.',
+                mode: 'timer', speakNumbers: true,
+                getSteps: (size) => [
+                    { label: 'Inhale', type: 'in', duration: size, color: 'var(--inhale)' },
+                    { label: 'Hold', type: 'holdIn', duration: size, color: 'var(--hold)' },
+                    { label: 'Exhale', type: 'out', duration: size, color: 'var(--exhale)' },
+                    { label: 'Hold', type: 'holdOut', duration: size, color: 'var(--hold-empty)' }
+                ]
+            },
+            'breathcount': {
+                title: 'Breath Count', desc: 'Simple, mindful breathing to steady your focus.',
+                warmupMsg: 'Settle in, and let your attention rest gently on your breath.',
+                mode: 'timer', speakNumbers: false,
+                getSteps: () => [
+                    { label: 'In', type: 'in', duration: 2, color: 'var(--inhale)' },
+                    { label: 'Out', type: 'out', duration: 2, color: 'var(--exhale)' }
+                ]
+            },
+            'paced': {
+                title: 'Paced Breathing', desc: 'Slow, even breaths to invite rest and ease.',
+                warmupMsg: 'Settle in, and let your attention rest gently on your breath.',
+                mode: 'timer', speakNumbers: false,
+                getSteps: (bpm) => {
+                    const tc = 60 / bpm;
+                    return [
+                        { label: 'In', type: 'in', duration: Math.floor(tc / 2), color: 'var(--inhale)' },
+                        { label: 'Out', type: 'out', duration: Math.ceil(tc / 2), color: 'var(--exhale)' }
+                    ];
+                }
+            },
+            'custom': {
+                title: 'Custom Rhythm', desc: 'Your own pace. Tip: a longer exhale deepens the calm.',
+                warmupMsg: 'Settle in, and anchor your attention on your breath.',
+                mode: 'custom', speakNumbers: true,
+                getSteps: (i, h, o) => {
+                    let s = [{ label: 'In', type: 'in', duration: i, color: 'var(--inhale)' }];
+                    if (h > 0) s.push({ label: 'Hold', type: 'holdIn', duration: h, color: 'var(--hold)' });
+                    s.push({ label: 'Out', type: 'out', duration: o, color: 'var(--exhale)' });
+                    return s;
+                }
+            }
         };
 
-        let activeKey = '', selectedWarmup = 0, userCycles = 4, userBoxSize = 4, userBPM = 6, audioCtx;
+        const SCALE_RANGE = { in: [0.5, 1.5], out: [1.5, 0.5], holdIn: [1.5, 1.5], holdOut: [0.5, 0.5] };
 
+        let activeKey = '', selectedWarmup = 0, userCycles = 4, userBoxSize = 4, userBPM = 6;
+        let audioCtx, calmVoice = null;
+        let isPaused = false, currentStepTo = 1, currentStepRemaining = 1;
+
+        /* ---------- Navigation ---------- */
         function toggleMenu() { document.getElementById('side-menu').classList.toggle('open'); }
-        function toggleBlogs() { 
-            document.getElementById('blog-overlay').classList.toggle('active'); 
-            if(document.getElementById('side-menu').classList.contains('open')) toggleMenu();
+        function toggleBlogs() {
+            document.getElementById('blog-overlay').classList.toggle('active');
+            if (document.getElementById('side-menu').classList.contains('open')) toggleMenu();
         }
+        function switchView(hideId, showId) {
+            const hideEl = document.getElementById(hideId), showEl = document.getElementById(showId);
+            hideEl.classList.remove('show');
+            setTimeout(() => {
+                hideEl.classList.remove('active');
+                showEl.classList.add('active');
+                requestAnimationFrame(() => showEl.classList.add('show'));
+            }, 200);
+        }
+        function goHome() { window.speechSynthesis.cancel(); location.reload(); }
 
         function init() {
             const container = document.getElementById('menu-container');
@@ -336,12 +440,17 @@
                 const tech = TECHNIQUES[key];
                 const card = document.createElement('div');
                 card.className = 'main-card';
+                card.setAttribute('role', 'button'); card.setAttribute('tabindex', '0');
                 card.onclick = () => openSetup(key);
-                card.innerHTML = `<h3>${tech.title}</h3><p>${tech.desc}</p>`;
+                card.onkeydown = (e) => { if (e.key === 'Enter' || e.key === ' ') openSetup(key); };
+                card.innerHTML = `${CARD_ICON}<div><h3>${tech.title}</h3><p>${tech.desc}</p></div>`;
                 container.appendChild(card);
             });
+            document.getElementById('home-view').classList.add('show');
+            primeVoices();
         }
 
+        /* ---------- Setup ---------- */
         function setWarmup(val, btn) {
             btn.parentElement.querySelectorAll('button').forEach(b => b.classList.remove('active'));
             btn.classList.add('active');
@@ -351,29 +460,28 @@
         function openSetup(key) {
             activeKey = key;
             const tech = TECHNIQUES[key];
-            document.getElementById('home-view').classList.remove('active');
-            document.getElementById('setup-view').classList.add('active');
+            switchView('home-view', 'setup-view');
             document.getElementById('setup-title').innerText = tech.title;
             const dynamicArea = document.getElementById('dynamic-setup');
-            
+
             let html = "";
             if (key === 'custom') {
-                html = `<span class="setting-label">Step Durations (Seconds)</span>
+                html = `<span class="setting-label">Step durations (seconds)</span>
                     <div class="custom-inputs">
                         <div class="custom-box"><span>In</span><input type="number" id="cIn" value="4" min="1" max="60" oninput="validNum(this, 1, 60)"></div>
                         <div class="custom-box"><span>Hold</span><input type="number" id="cHold" value="0" min="0" max="60" oninput="validNum(this, 0, 60)"></div>
                         <div class="custom-box"><span>Out</span><input type="number" id="cOut" value="5" min="1" max="60" oninput="validNum(this, 1, 60)"></div>
                     </div>`;
             } else if (key === 'box') {
-                html = `<span class="setting-label">Box Size</span><div class="btn-group" style="margin-bottom:20px">${[4,5,6].map(n => `<button class="opt-btn ${n==4?'active':''}" onclick="userBoxSize=${n}; highlight(this)">${n}s</button>`).join('')}</div>`;
+                html = `<span class="setting-label">Box size</span><div class="btn-group" style="margin-bottom:20px">${[4, 5, 6].map(n => `<button class="opt-btn ${n == 4 ? 'active' : ''}" onclick="userBoxSize=${n}; highlight(this)">${n}s</button>`).join('')}</div>`;
             } else if (key === 'paced') {
-                html = `<span class="setting-label">BPM</span><div class="btn-group" style="margin-bottom:20px">${[10,6,5,3,2].map(n => `<button class="bpm-btn ${n==6?'active':''}" onclick="userBPM=${n}; highlight(this)">${n}</button>`).join('')}</div>`;
+                html = `<span class="setting-label">Breaths per minute</span><div class="btn-group" style="margin-bottom:20px">${[10, 6, 5, 3, 2].map(n => `<button class="bpm-btn ${n == 6 ? 'active' : ''}" onclick="userBPM=${n}; highlight(this)">${n}</button>`).join('')}</div>`;
             } else if (tech.mode === 'cycles') {
-                html = `<span class="setting-label">Cycles</span><div class="btn-group">${[2,4,6,8].map(n => `<button class="opt-btn ${n==4?'active':''}" onclick="userCycles=${n}; highlight(this)">${n}</button>`).join('')}</div>`;
+                html = `<span class="setting-label">Cycles</span><div class="btn-group">${[2, 4, 6, 8].map(n => `<button class="opt-btn ${n == 4 ? 'active' : ''}" onclick="userCycles=${n}; highlight(this)">${n}</button>`).join('')}</div>`;
             }
 
             if (tech.mode !== 'cycles') {
-                html += `<span class="setting-label">Total Duration</span><div style="display:flex; gap:10px; align-items:center; justify-content:center"><input type="number" id="minIn" value="2" min="0" max="60" oninput="validNum(this, 0, 60)"> min <input type="number" id="secIn" value="00" min="0" max="60" oninput="validNum(this, 0, 60)"> sec</div>`;
+                html += `<span class="setting-label">Total duration</span><div style="display:flex; gap:10px; align-items:center; justify-content:center"><input type="number" id="minIn" value="2" min="0" max="60" oninput="validNum(this, 0, 60)"> min <input type="number" id="secIn" value="0" min="0" max="60" oninput="validNum(this, 0, 60)"> sec</div>`;
             }
             dynamicArea.innerHTML = html;
         }
@@ -387,6 +495,7 @@
 
         function highlight(btn) { btn.parentElement.querySelectorAll('button').forEach(b => b.classList.remove('active')); btn.classList.add('active'); }
 
+        /* ---------- Audio: bell + soothing voice ---------- */
         function unlockAudio() {
             if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
             if (audioCtx.state === 'suspended') audioCtx.resume();
@@ -394,35 +503,135 @@
             source.buffer = audioCtx.createBuffer(1, 1, 22050);
             source.connect(audioCtx.destination);
             source.start(0);
-            window.speechSynthesis.speak(new SpeechSynthesisUtterance(''));
         }
 
-        function playBell() {
+        // Soft singing-bowl style bell: layered detuned tones through a gentle lowpass, long warm decay.
+        function playBell(soft) {
             if (!audioCtx) unlockAudio();
-            [240, 480, 720].forEach((f, i) => {
-                const o = audioCtx.createOscillator(), g = audioCtx.createGain();
-                o.frequency.setValueAtTime(f, audioCtx.currentTime);
-                g.gain.setValueAtTime(0.1/(i+1), audioCtx.currentTime);
-                g.gain.exponentialRampToValueAtTime(0.0001, audioCtx.currentTime + 3);
-                o.connect(g); g.connect(audioCtx.destination); o.start(); o.stop(audioCtx.currentTime+3);
+            const now = audioCtx.currentTime;
+            const partials = soft ? [196, 294, 440] : [220, 440, 660];
+            const decay = soft ? 4.5 : 3.2;
+            partials.forEach((f, i) => {
+                const o = audioCtx.createOscillator();
+                const g = audioCtx.createGain();
+                const filter = audioCtx.createBiquadFilter();
+                filter.type = 'lowpass'; filter.frequency.value = 1200;
+                o.type = 'sine';
+                o.frequency.setValueAtTime(f, now);
+                g.gain.setValueAtTime(0, now);
+                g.gain.linearRampToValueAtTime(0.09 / (i + 1), now + 0.15);
+                g.gain.exponentialRampToValueAtTime(0.0001, now + decay);
+                o.connect(filter); filter.connect(g); g.connect(audioCtx.destination);
+                o.start(now); o.stop(now + decay + 0.2);
             });
+        }
+
+        // Pick the calmest available system voice once, and cache it.
+        function primeVoices() {
+            const pick = () => {
+                const voices = window.speechSynthesis.getVoices();
+                if (!voices.length) return;
+                const preferredNames = ['samantha', 'moira', 'karen', 'serena', 'fiona', 'google uk english female', 'google us english', 'zira', 'aria'];
+                calmVoice = voices.find(v => preferredNames.some(name => v.name.toLowerCase().includes(name)))
+                    || voices.find(v => /female/i.test(v.name) && v.lang.startsWith('en'))
+                    || voices.find(v => v.lang.startsWith('en'))
+                    || voices[0];
+            };
+            pick();
+            if (window.speechSynthesis.onvoiceschanged !== undefined) window.speechSynthesis.onvoiceschanged = pick;
         }
 
         function speak(text) {
             window.speechSynthesis.cancel();
             const u = new SpeechSynthesisUtterance(text);
+            if (calmVoice) u.voice = calmVoice;
             u.lang = 'en-US';
-            u.volume = 0.4; u.rate = 1.0; window.speechSynthesis.speak(u);
+            u.volume = 0.55;   // gentle, not intrusive
+            u.rate = 0.82;     // slower, unhurried pace
+            u.pitch = 0.92;    // slightly lower, warmer tone
+            window.speechSynthesis.speak(u);
         }
 
+        /* ---------- Timing ---------- */
         const waitOneSec = () => new Promise(r => {
             const start = performance.now();
-            const f = () => (performance.now()-start >= 1000) ? r() : requestAnimationFrame(f);
+            let pausedAccum = 0, pauseBegan = null;
+            const f = () => {
+                if (isPaused) {
+                    if (pauseBegan === null) pauseBegan = performance.now();
+                    requestAnimationFrame(f);
+                    return;
+                }
+                if (pauseBegan !== null) { pausedAccum += performance.now() - pauseBegan; pauseBegan = null; }
+                (performance.now() - start - pausedAccum >= 1000) ? r() : requestAnimationFrame(f);
+            };
             requestAnimationFrame(f);
         });
 
+        /* ---------- Orb animation ---------- */
+        const orbWrapper = () => document.getElementById('orb-wrapper');
+        function getCurrentScale(el) {
+            const t = getComputedStyle(el).transform;
+            if (t === 'none') return 0.5;
+            const m = t.match(/matrix\(([^)]+)\)/);
+            return m ? parseFloat(m[1].split(',')[0]) : 0.5;
+        }
+        function animateOrbTo(scale, seconds) {
+            const el = orbWrapper();
+            el.style.transitionDuration = seconds + 's';
+            el.style.transitionTimingFunction = 'var(--ease-breath)';
+            requestAnimationFrame(() => { el.style.transform = `scale(${scale})`; });
+        }
+        function freezeOrb() {
+            const el = orbWrapper();
+            const scale = getCurrentScale(el);
+            el.style.transitionDuration = '0s';
+            el.style.transform = `scale(${scale})`;
+        }
+        function setPhaseColor(color) {
+            document.getElementById('circle').style.backgroundColor = color;
+            document.getElementById('ring-outer').style.backgroundColor = color;
+            document.getElementById('ring-inner').style.backgroundColor = color;
+        }
+
+        /* ---------- Pause / resume ---------- */
+        function togglePause() {
+            isPaused = !isPaused;
+            const btn = document.getElementById('pauseBtn');
+            if (isPaused) {
+                freezeOrb();
+                window.speechSynthesis.pause();
+                btn.innerText = 'Resume';
+            } else {
+                window.speechSynthesis.resume();
+                animateOrbTo(currentStepTo, Math.max(currentStepRemaining, 0.2));
+                btn.innerText = 'Pause';
+            }
+        }
+
+        /* ---------- Progress dots ---------- */
+        function renderDots(total) {
+            const wrap = document.getElementById('progress-dots');
+            wrap.innerHTML = '';
+            if (total > 12) { wrap.style.display = 'none'; return; }
+            wrap.style.display = 'flex';
+            for (let i = 0; i < total; i++) {
+                const d = document.createElement('div');
+                d.className = 'dot';
+                d.id = 'dot-' + i;
+                wrap.appendChild(d);
+            }
+        }
+        function markDot(index) {
+            document.querySelectorAll('.progress-dots .dot').forEach(d => d.classList.remove('current'));
+            for (let i = 0; i < index; i++) { const d = document.getElementById('dot-' + i); if (d) d.classList.add('done'); }
+            const cur = document.getElementById('dot-' + index); if (cur) cur.classList.add('current');
+        }
+
+        /* ---------- Session ---------- */
         async function initiateSession() {
             unlockAudio();
+            isPaused = false;
             const tech = TECHNIQUES[activeKey];
             let steps;
 
@@ -440,44 +649,59 @@
             if (tech.mode !== 'cycles') {
                 const m = parseInt(document.getElementById('minIn').value) || 0, s = parseInt(document.getElementById('secIn').value) || 0;
                 const totalTimeReq = (m * 60) + s;
-                loops = Math.ceil(totalTimeReq / cycleDur);
+                loops = Math.max(1, Math.ceil(totalTimeReq / cycleDur));
             }
 
-            document.getElementById('setup-view').classList.remove('active');
-            document.getElementById('active-view').classList.add('active');
-            document.getElementById('circle').style.borderRadius = tech.shape;
+            switchView('setup-view', 'active-view');
+            document.getElementById('pauseBtn').innerText = 'Pause';
+            renderDots(loops);
+            orbWrapper().style.transform = 'scale(0.5)';
 
-            if(selectedWarmup > 0) {
-                document.getElementById('circle').style.display = 'none';
-                document.getElementById('phase-label').innerText = "Warmup";
+            if (selectedWarmup > 0) {
+                document.getElementById('visual-hub').style.visibility = 'hidden';
+                document.getElementById('phase-label').innerText = 'Warmup';
                 document.getElementById('warmup-tip').innerText = tech.warmupMsg;
-                for(let i = selectedWarmup; i > 0; i--) { document.getElementById('counter').innerText = i; await waitOneSec(); }
+                for (let i = selectedWarmup; i > 0; i--) {
+                    document.getElementById('counter').innerText = i;
+                    await waitOneSec();
+                }
             }
 
-            document.getElementById('warmup-tip').innerText = "";
-            document.getElementById('circle').style.display = 'block';
-            playBell(); await new Promise(r => setTimeout(r, 1500));
+            document.getElementById('warmup-tip').innerText = '';
+            document.getElementById('visual-hub').style.visibility = 'visible';
+            playBell(false);
+            await new Promise(r => setTimeout(r, 1500));
 
-            for(let c = 1; c <= loops; c++) {
-                document.getElementById('cycle-info').innerText = `Cycle ${c} of ${loops}`;
-                for(let step of steps) {
+            for (let c = 1; c <= loops; c++) {
+                document.getElementById('cycle-info').innerText = tech.mode === 'cycles' || loops <= 12 ? `Cycle ${c} of ${loops}` : '';
+                markDot(c - 1);
+                for (let step of steps) {
                     document.getElementById('phase-label').innerText = step.label;
-                    document.getElementById('circle').style.backgroundColor = step.color;
-                    for(let i = 1; i <= step.duration; i++) {
+                    setPhaseColor(step.color);
+                    const [, to] = SCALE_RANGE[step.type];
+                    currentStepTo = to;
+                    animateOrbTo(to, step.duration);
+                    for (let i = 1; i <= step.duration; i++) {
                         document.getElementById('counter').innerText = i;
-                        const s = step.grow ? 0.5 + (i/step.duration) : 1.5 - (i/step.duration);
-                        document.getElementById('circle').style.transform = `scale(${s})`;
-                        if(i === 1) speak(step.label);
-                        else if(tech.speakNumbers) speak(i.toString());
+                        currentStepRemaining = step.duration - i + 1;
+                        if (i === 1) speak(step.label);
+                        else if (tech.speakNumbers) speak(i.toString());
                         await waitOneSec();
                     }
                 }
             }
-            document.getElementById('phase-label').innerText = "Complete";
-            document.getElementById('counter').innerText = "Done";
-            await new Promise(r => setTimeout(r, 5000));
-            location.reload();
+
+            document.getElementById('phase-label').innerText = 'Complete';
+            document.getElementById('counter').innerText = '';
+            document.getElementById('cycle-info').innerText = '';
+            document.getElementById('closing-note').innerText = 'Well done. Take a moment before you move on.';
+            document.getElementById('pauseBtn').style.visibility = 'hidden';
+            animateOrbTo(0.7, 3);
+            playBell(true);
+            window.speechSynthesis.cancel();
+            document.getElementById('resetBtn').innerText = 'Return home';
         }
+
         init();
     </script>
 </body>
